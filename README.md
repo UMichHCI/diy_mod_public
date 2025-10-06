@@ -1,4 +1,4 @@
-# DIY-MOD Quick Start Guide
+# DIY-MOD: Personalized Content Moderation System
 
 This repository contains the implementation for the paper:
 
@@ -9,13 +9,27 @@ by Rayhan Rashed and Farnaz Jahanbakhsh
 📄 Paper: https://arxiv.org/abs/2509.22861
 ```
 
+## What is DIY-MOD?
+
+DIY-MOD is a browser extension that lets users personalize their online content experience. Instead of simply blocking unwanted content, it transforms it using AI - blurring, adding warnings, or rewriting content based on your preferences.
+
+## System Components
+
+### Core DIY-MOD System (Main Implementation)
+- **Backend**: AI-powered content processing server
+- **Browser Extension**: Real-time content transformation in your browser
+
+### User Study Components (Research Tools)
+- **Reddit Clone**: Custom frontend used for User Study 2 to test feed comparison
+- **Custom Feed Tools**: Scripts for creating test feeds with controlled content
+
 ## Prerequisites
 - Python 3.8+
 - Node.js 16+
 - Redis server
-- OpenAI API key (set in environment or config)
+- OpenAI and Gemini API key(s)
 
-## Setup Instructions
+## Quick Start: Core DIY-MOD System
 
 ### 1. Backend Setup
 ```bash
@@ -27,11 +41,11 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 cd Backend 
 pip install -r requirements.txt
 
-# Configure your API keys in Backend/config.yaml or create .env file
+# Configure your API key in Backend/config.yaml or create .env file
 # OPENAI_API_KEY=your-api-key-here
 ```
 
-### 2. Start Services
+### 2. Start the Backend Services
 ```bash
 # Terminal 1: Start Redis server
 redis-server
@@ -48,7 +62,7 @@ python app.py
 # Server will run on http://localhost:8001
 ```
 
-### 3. Browser Extension Setup
+### 3. Install Browser Extension
 ```bash
 # Build the browser extension
 cd BrowserExtension
@@ -62,48 +76,59 @@ npm run build
 # 4. Select the BrowserExtension/dist folder
 ```
 
-### 4. Reddit Clone Frontend (Optional)
-```bash
-# Start the demo Reddit clone for testing
-cd reddit-clone
-npm install
-npm run dev
-# Frontend will run on http://localhost:3000
-```
+## Using DIY-MOD
+
+Once installed, you can:
+
+1. **Click the DIY-MOD extension icon** in your browser toolbar
+2. **Create content filters** using natural language (e.g., "blur political content") or by uploading example images
+3. **Set filter intensity** (1-5): from subtle blurring to complete content rewriting
+4. **Choose duration**: temporary (24 hours) or permanent filters
+5. **Browse any website** - DIY-MOD will automatically transform content based on your filters
+
+The extension works on any website and transforms content in real-time as you browse.
 
 ## Configuration
 
-- **Server config**: `Backend/config.yaml`
-- **Extension config**: `BrowserExtension/src/shared/config.ts`
-- **Environment variables**: Create `.env` file in Backend directory
+- **Backend settings**: `Backend/config.yaml`
+- **Extension settings**: Available through the extension's options page
+- **API keys**: Set `OPENAI_API_KEY` in environment or config file
 
-## Usage
+## For Researchers: User Study Tools
 
-### Create Custom Feed for Testing
+If you want to replicate our user study or test custom feeds:
+
+### Reddit Clone (User Study 2 Tool)
+```bash
+# Start the research frontend
+cd reddit-clone
+npm install
+npm run dev
+# Runs on http://localhost:3000
+```
+
+### Custom Feed Testing
 ```bash
 cd Backend
 
-# Create an example JSON feed
+# Create test feed data
 python process_json_custom_feed.py --create-example
-# This creates example_mixed_feed.json
 
-# Process the custom feed
-python process_json_custom_feed.py custom_feed_example.json --save --user demo-user --title "Custom Feed Example"
+# Process custom feeds for comparison
+python process_json_custom_feed.py custom_feed_example.json --save --user demo-user --title "Test Feed"
 
-# View processed feed at http://localhost:3000
+# View processed feeds in reddit-clone frontend
 ```
 
-### Using the Browser Extension
-1. Click the DIY-MOD extension icon in your browser
-2. Create filters using natural language or by uploading images
-3. Configure filter intensity (1-5) and duration
-4. Browse any website to see content transformation in action
+The reddit-clone frontend shows side-by-side comparisons of original vs. transformed content, which was used in our research to evaluate user preferences.
 
 ## System Architecture
-- **Backend**: FastAPI server with LLM integration and background processing [DIY-MOD Server]
-- **Extension**: Content script that modifies web pages in real-time [DIY-MOD Client]
-- **Frontend**: Next.js app for testing and feed comparison [Reddit Feed we use for User Study 2]
-- **Processing**: Celery workers for handling image transformations [Async Image Transformation]
 
-You are now ready to use the DIY-MOD system for personalized content moderation!
+- **Backend Server**: FastAPI with LLM integration for content analysis and transformation
+- **Browser Extension**: Content script that modifies web pages in real-time
+- **Celery Workers**: Background processing for image transformations
+- **Redis Cache**: Fast caching for processed content
+- **Reddit Clone**: Research tool for controlled feed comparison studies
+
+You are now ready to use DIY-MOD for personalized content moderation!
 
