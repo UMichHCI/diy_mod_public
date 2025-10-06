@@ -6,7 +6,7 @@ This repository contains the implementation for the paper:
 "What If Moderation Didn't Mean Suppression? A Case for Personalized Content Transformation"
 
 by Rayhan Rashed and Farnaz Jahanbakhsh
-📄 Paper: https://arxiv.org/abs/2509.22861
+📄 Paper: [https://arxiv.org/abs/2509.22861](https://arxiv.org/abs/2509.22861)
 ```
 
 ## What is DIY-MOD?
@@ -86,7 +86,8 @@ Once installed, you can:
 4. **Choose duration**: temporary (24 hours) or permanent filters
 5. **Browse any website** - DIY-MOD will automatically transform content based on your filters
 
-The extension works on any website and transforms content in real-time as you browse.
+The extension currently works on top of Reddit and transforms content in real-time as you browse.
+Twitter and Facebook support is coming!!
 
 ## Configuration
 
