@@ -2,12 +2,10 @@
 
 This repository contains the implementation for the paper:
 
-```
-"What If Moderation Didn't Mean Suppression? A Case for Personalized Content Transformation"
 
-by Rayhan Rashed and Farnaz Jahanbakhsh
-📄 Paper: [https://arxiv.org/abs/2509.22861](https://arxiv.org/abs/2509.22861)
-```
+**What If Moderation Didn't Mean Suppression? A Case for Personalized Content Transformation**
+Rayhan Rashed and Farnaz Jahanbakhsh
+📄 Paper Link: [https://arxiv.org/abs/2509.22861](https://arxiv.org/abs/2509.22861)
 
 ## What is DIY-MOD?
 
