@@ -1,10 +1,17 @@
-# DIY-MOD User Study Interface (Reddit Clone)
+# Dual-Feed System (Section 6 of Paper)
+> **Note:** This is the interface used in User Study 2 to evaluate the DIY-MOD system.
+
+[**Live Demo**](https://diy-mod.vercel.app/) | [**Local Deployment**](#setup)
 
 This is a Next.js application designed to simulate a Reddit feed for the DIY-MOD user studies. It interacts with the DIY-MOD backend to display content and allows researchers to compare "Original" vs. "Transformed" feeds side-by-side.
 
 ## Overview
 
-This interface was used in User Study 2 of the paper *"What If Moderation Didn't Mean Suppression?"*. It provides a controlled environment to evaluate the efficacy of content transformations without the variability of a live social media platform.
+This interface, referred to as the **Dual-Feed System** in Section 6, provides a side-by-side comparison of:
+1.  **Original Feed**: Unaltered social media content.
+2.  **Transformed Feed**: Content processed by DIY-MOD according to the user's natural language preferences.
+
+It allows researchers to evaluate user satisfaction and preference without the confounding variables of a live platform algorithm.
 
 ## Prerequisites
 

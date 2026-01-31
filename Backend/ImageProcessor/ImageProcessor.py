@@ -4,8 +4,6 @@ sys.path.append("..")
 from openai import OpenAI
 from typing import List, Dict, Any
 from .ObjectDetector import GroundingDINODetector
-from .ImageConverter import ImageConverterFromURL, ImageConverterToURL, OpenCVImageConverterFromURL, OpenCVImageConverterToURL
-from .ImageModifier import ImageModifier, BlurModifier
 from FilterUtils import get_best_filter
 # from FilterUtils import get_random_interventions
 # from CartoonImager import make_image_cartoonish, make_image_cartoonish_gpt_image, make_image_replacement_gemini
@@ -14,9 +12,6 @@ from ServerCache import image_cache
 
 # singletons
 image_detector = GroundingDINODetector()
-image_to_url: ImageConverterToURL = OpenCVImageConverterToURL()
-image_from_url: ImageConverterFromURL = OpenCVImageConverterFromURL()
-image_modifier: ImageModifier = BlurModifier()
 cartoonish_filter = ["cartoonish."]
 edit_or_replace_filter = ["edit."]
 
@@ -58,17 +53,7 @@ class ImageProcessor:
         serialized_filters = [f.__dict__ for f in filters_for_task] #filters_for_task  #
         print(type(serialized_filters))
         print(f"\033[92m' Here! Here! Here! \033[0m")
-        if intervention_type == "overlay" or intervention_type == "blur":
-            # This part can be refactored to also be a 'direct' mode task if needed
-            bounding_boxes = self.get_bounding_boxes_for_image(image_url, [best_filter_object['filter_text']])
-            return {
-                "image_url": image_url,
-                "best_filter_name": best_filter_object['filter_text'],
-                "intervention_type": intervention_type,
-                "bounding_boxes": bounding_boxes
-            }
-
-        elif intervention_type == "edit_to_replace":
+        if intervention_type == "edit_to_replace":
             # This is the main path for complex, AI-driven interventions.
             # We use the 'rank' mode to decide between multiple options.
             
@@ -136,96 +121,3 @@ class ImageProcessor:
                 "filters": serialized_filters
             }
 
-    def get_bounding_boxes_for_image(self, image_url, filters):
-        cached_url = image_cache.get_processed_value_from_cache(image_url, filters)
-        if cached_url is not None:
-            return cached_url
-        try:
-            # Retrieve the image from the URL
-            image = image_from_url.convert(image_url)
-            if image is None:
-                raise Exception("Image conversion failed")
-            
-            # Detect objects in the image
-            object_boxes = image_detector.detect(image, filters)
-            if object_boxes is None:
-                raise Exception("Object detection failed")
-            
-            stringified_boxes = str(object_boxes)
-            
-            # Modify the image
-            # modified_img_obj = image_modifier.modify_image(image, object_boxes)
-
-            # Convert image to URL
-            # processed_url = image_to_url.convert(modified_img_obj, f"processed_images/{uuid.uuid4()}.jpg")
-            # if processed_url is None:
-            #     raise Exception("Image conversion failed")
-
-            image_cache.set_processed_value_to_cache(image_url, filters, stringified_boxes)
-            return stringified_boxes
-
-        except Exception as e:
-            print(e)
-            return "[]"
-        
-    # def make_image_cartoonish(self, url):
-    #     image_desc_response = self.client.chat.completions.create(
-    #         model="gpt-4o-mini",
-    #         messages=[{
-    #             "role": "user",
-    #             "content": [
-    #                 {"type": "text", "text": "What's in this image?"},
-    #                 {
-    #                     "type": "image_url",
-    #                     "image_url": {
-    #                         "url": url,
-    #                     },
-    #                 },
-    #             ],
-    #         }],
-    #     )
-
-    #     desc = image_desc_response.choices[0].message.content
-
-    #     new_img_response = self.client.images.generate(
-    #         model="dall-e-3",
-    #         prompt=f"I want a cartoon style image that is the following: \n {desc}",
-    #         size="1024x1024",
-    #         quality="standard",
-    #         n=1,
-    #     )
-
-    #     return new_img_response.data[0].url
-
-# def process_image(image_url, filters):
-    
-#     cached_url = image_cache.get_processed_value_from_cache(image_url, filters)
-#     if cached_url is not None:
-#         return cached_url
-#     try:
-#         # Retrieve the image from the URL
-#         image = image_from_url.convert(image_url)
-#         if image is None:
-#             raise Exception("Image conversion failed")
-        
-#         # Detect objects in the image
-#         object_boxes = image_detector.detect(image, filters)
-#         if object_boxes is None:
-#             raise Exception("Object detection failed")
-        
-#         stringified_boxes = str(object_boxes)
-        
-#         # Modify the image
-#         # modified_img_obj = image_modifier.modify_image(image, object_boxes)
-
-#         # Convert image to URL
-#         # processed_url = image_to_url.convert(modified_img_obj, f"processed_images/{uuid.uuid4()}.jpg")
-#         # if processed_url is None:
-#         #     raise Exception("Image conversion failed")
-
-#         image_cache.set_processed_value_to_cache(image_url, filters, stringified_boxes)
-#         return image_url, stringified_boxes
-
-#     except Exception as e:
-#         print(e)
-#         return "[]"

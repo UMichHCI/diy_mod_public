@@ -80,11 +80,6 @@ MODEL_REGISTRY = {
     "grounding_dino": GroundingDinoModel(), # Alias
 }
 
-# --- Helper Functions ---
-def generate_base64_from_bytes(image_bytes: bytes) -> str:
-    """Generates a base64 data URL from image bytes."""
-    base64_data = base64.b64encode(image_bytes).decode('utf-8')
-    return f"data:image/png;base64,{base64_data}"
 
 # --- Celery Tasks ---
 
@@ -285,42 +280,7 @@ def run_scoring_and_find_best_batch(batch_results: list, source_url: str, user_c
     return chord(scoring_tasks, callback).apply_async()
 
 
-@app.task
-def run_scoring_and_find_best(generated_results: list, source_url: str, user_context: dict, score_provider: str, job_id: str, filters: list, scoring_strategy: str = "single_stage"):
-    """
-    Second task in the 'rank' chain. Called after candidate generation is complete.
-    This task creates and executes the scoring sub-tasks.
-    """
-    logger.info(f"Running scoring for job_id: {job_id}")
-    # Filter out failed generation tasks
-    successful_results = [r for r in generated_results if r.get('status') == 'success']
-    if not successful_results:
-        logger.error(f"All candidate generation tasks failed for job_id: {job_id}")
-        # We can't proceed, but this isn't a task failure, it's a workflow failure.
-        return {"error": "All candidate generation tasks failed.", "status": "failed", "job_id": job_id}
 
-    scoring_tasks = []
-    for result in successful_results:
-        scoring_tasks.append(score_intervention.s(
-            score_provider=score_provider,
-            original_url=source_url,
-            candidate_result=result,
-            user_context=user_context,
-            scoring_strategy=scoring_strategy
-        ))
-    
-    # Create a callback to the finalizer task.
-    # Pass the successful generation results along so the finalizer can find the winner's URL.
-    callback = finalize_workflow.s(
-        generated_results=successful_results,
-        source_url=source_url,
-        filters=filters,
-        job_id=job_id
-    )
-    
-    # Link the scoring group to the finalizer.
-    # Use a chord to run the scoring tasks in parallel and then finalize.
-    return chord(scoring_tasks, callback).apply_async()
 
 
 @app.task
@@ -439,68 +399,33 @@ def run_intervention_workflow(self, data: str):
         if not candidate_names:
             return {"error": "'candidate_names' is required for 'rank' mode", "status": "failed"}
 
-        # Check if batch processing is enabled (default: True for better performance)
-        use_batch_processing = request.get("use_batch_processing", True)
+        # OPTIMIZED: Use batch processing - process all interventions in one task
+        logger.info(f"Using BATCH processing for {len(candidate_names)} interventions")
+        generation_provider = request.get("generation_provider", "gemini")
         
-        if use_batch_processing:
-            # OPTIMIZED: Use batch processing - process all interventions in one task
-            logger.info(f"Using BATCH processing for {len(candidate_names)} interventions")
-            generation_provider = request.get("generation_provider", "gemini")
-            
-            # Single batch task instead of multiple individual tasks
-            batch_task = process_image_batch.s(
-                source_url=source_url,
-                intervention_names=candidate_names,
-                user_context=user_context,
-                model_provider=generation_provider,
-                job_id=job_id
-            )
-            
-            # Callback for scoring - now receives a list of results
-            score_provider = request.get("score_provider", "openai")
-            scoring_strategy = request.get("scoring_strategy", "single_stage")
-            callback = run_scoring_and_find_best_batch.s(
-                source_url=source_url,
-                user_context={"filters": filters, **user_context},
-                score_provider=score_provider,
-                job_id=job_id,
-                filters=[chosen_filter],
-                scoring_strategy=scoring_strategy
-            )
-            
-            # Chain: batch generation -> batch scoring
-            return (batch_task | callback).apply_async()
-            
-        else:
-            # LEGACY: Individual tasks (kept for compatibility)
-            logger.info(f"Using LEGACY individual processing for {len(candidate_names)} interventions")
-            generation_provider = request.get("generation_provider", "gemini")
-            generation_tasks = []
-            for name in candidate_names:
-                payload = {
-                    "url": source_url,
-                    "intervention_name": name,
-                    "filters": user_context,
-                    "model_provider": generation_provider, "job_id": job_id
-                }
-                generation_tasks.append(process_image_intervention.s(json.dumps(payload)))
-            
-            # Step B: Define the callback that will run after generation is complete.
-            # We pass parameters the next stage will need using a signature.
-            score_provider = request.get("score_provider", "openai")
-            scoring_strategy = request.get("scoring_strategy", "single_stage")
-            callback = run_scoring_and_find_best.s(
-                source_url=source_url,
-                user_context={"filters": filters, **user_context},
-                score_provider=score_provider,
-                job_id=job_id,
-                filters=[chosen_filter],
-                scoring_strategy=scoring_strategy
-            )
-            
-            # Step C: Execute the generation group and link it to the scoring callback.
-            # Use a chord to run the scoring tasks in parallel and then finalize.
-            return chord(generation_tasks, callback).apply_async()
+        # Single batch task instead of multiple individual tasks
+        batch_task = process_image_batch.s(
+            source_url=source_url,
+            intervention_names=candidate_names,
+            user_context=user_context,
+            model_provider=generation_provider,
+            job_id=job_id
+        )
+        
+        # Callback for scoring - now receives a list of results
+        score_provider = request.get("score_provider", "openai")
+        scoring_strategy = request.get("scoring_strategy", "single_stage")
+        callback = run_scoring_and_find_best_batch.s(
+            source_url=source_url,
+            user_context={"filters": filters, **user_context},
+            score_provider=score_provider,
+            job_id=job_id,
+            filters=[chosen_filter],
+            scoring_strategy=scoring_strategy
+        )
+        
+        # Chain: batch generation -> batch scoring
+        return (batch_task | callback).apply_async()
 
     else:
         logger.error(f"Invalid mode specified: {mode}")

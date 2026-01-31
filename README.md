@@ -4,7 +4,7 @@ This repository contains the official implementation for the paper:
 
 **What If Moderation Didn't Mean Suppression? A Case for Personalized Content Transformation**  
 *Rayhan Rashed and Farnaz Jahanbakhsh*  
-📄 [Read the Paper](https://arxiv.org/abs/2509.22861)
+📄 [Read the Paper](https://arxiv.org/abs/2509.22861) | 🌐 [Project Website](https://rayhan.io/diymod/)
 
 ## Overview
 
@@ -19,7 +19,8 @@ The system consists of two primary components:
     *   **Browser Extension**: A Chrome extension that intercepts web content and applies real-time transformations.
 
 2.  **Research Tools**:
-    *   **Reddit Clone**: A Next.js-based frontend used in our user studies to simulate a social media feed and evaluate user preferences in a controlled environment.
+2.  **Research Tools**:
+    *   **Dual-Feed System** (Section 6): A controlled simulation used in our user studies. [Live Demo](https://diy-mod.vercel.app/) | [Readme](reddit-clone/README.md)
 
 ## Prerequisites
 
