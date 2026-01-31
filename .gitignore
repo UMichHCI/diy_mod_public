@@ -19,3 +19,9 @@ reddit-clone/yarn-error.log*
 **/.env
 **/.env/*
 **/.next/*
+Backend/logs/*
+!Backend/logs/.gitkeep
+Backend/data/*
+!Backend/data/.gitkeep
+*.pyc
+__pycache__/

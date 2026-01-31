@@ -91,6 +91,59 @@ class OpenAIModel(ImageModel):
         response.raise_for_status()  # Raise an exception for bad status codes
         return response.content
     
+    def score_image_two_stage(self, system_prompt: str, user_prompt: str, original_image_url: str, candidate_image_url: str, model_name: str = "gpt-4o") -> str:
+        """
+        Uses a two-stage prompting approach (CoT -> Score) for more reliable evaluation.
+        Stage 1: Ask for Chain-of-Thought analysis.
+        Stage 2: Ask for the final score based on the analysis.
+        """
+        
+        # --- Stage 1: Chain of Thought Analysis ---
+        cot_user_prompt = user_prompt + "\n\nFirst, provide a detailed step-by-step analysis of the intervention based on the evaluation axes. Do NOT provide the final JSON score yet."
+        
+        analysis_response = self.client.chat.completions.create(
+            model=model_name,
+            messages=[{"role": "system", "content": system_prompt},
+                      {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": cot_user_prompt},
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": original_image_url},
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": candidate_image_url},
+                            },
+                        ],
+                    }],
+        )
+        analysis_text = analysis_response.choices[0].message.content
+        logger.info(f"Two-Stage Scoring: Stage 1 Analysis complete. Length: {len(analysis_text)} chars")
+        
+        # --- Stage 2: Final Scoring ---
+        scoring_user_prompt = "Based on the above analysis, now provide the final score in the requested JSON format."
+        
+        score_response = self.client.chat.completions.create(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {
+                    "role": "user", 
+                    "content": [
+                        {"type": "text", "text": cot_user_prompt},
+                        {"type": "image_url", "image_url": {"url": original_image_url}},
+                        {"type": "image_url", "image_url": {"url": candidate_image_url}},
+                    ]
+                }, 
+                {"role": "assistant", "content": analysis_text},
+                {"role": "user", "content": scoring_user_prompt}
+            ],
+            response_format={"type": "json_object"},
+        )
+        
+        return score_response.choices[0].message.content
 
     def score_image(self, system_prompt: str, user_prompt: str, original_image_url: str, candidate_image_url: str, model_name: str = "gpt-4o") -> str:
         """

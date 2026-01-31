@@ -13,6 +13,7 @@ from celery import Celery, group, chord
 from ml_models.base import ImageModel
 from ml_models.openai_models import OpenAIModel
 from ml_models.gemini_models import GeminiModel
+from ml_models.grounding_dino_model import GroundingDinoModel # Added local model
 from interventions import replacement, stylization, occlusion, blur, shrink, inpainting, warning, selectivestylization, stylize_cubism, stylize_impressionism, stylize_ghibli, stylize_pointillism, selective_stylize_cubism, selective_stylize_impressionism, selective_stylize_ghibli, selective_stylize_pointillism
 from utils.storage import storage_manager # Use the singleton instance
 from ServerCache import image_cache
@@ -75,6 +76,8 @@ INTERVENTION_REGISTRY = {
 MODEL_REGISTRY = {
     "openai": OpenAIModel(OPENAI_API_KEY),
     "gemini": GeminiModel(GOOGLE_API_KEY),
+    "local": GroundingDinoModel(), # Registered as local
+    "grounding_dino": GroundingDinoModel(), # Alias
 }
 
 # --- Helper Functions ---
@@ -246,7 +249,7 @@ def finalize_workflow(scores: list, generated_results: list, source_url: str, fi
 
 
 @app.task
-def run_scoring_and_find_best_batch(batch_results: list, source_url: str, user_context: dict, score_provider: str, job_id: str, filters: list):
+def run_scoring_and_find_best_batch(batch_results: list, source_url: str, user_context: dict, score_provider: str, job_id: str, filters: list, scoring_strategy: str = "single_stage"):
     """
     OPTIMIZED: Handle results from batch processing.
     batch_results is a list of intervention results from a single batch task.
@@ -266,7 +269,8 @@ def run_scoring_and_find_best_batch(batch_results: list, source_url: str, user_c
             score_provider=score_provider,
             original_url=source_url,
             candidate_result=result,
-            user_context=user_context
+            user_context=user_context,
+            scoring_strategy=scoring_strategy
         ))
     
     # Create callback to finalize results
@@ -282,7 +286,7 @@ def run_scoring_and_find_best_batch(batch_results: list, source_url: str, user_c
 
 
 @app.task
-def run_scoring_and_find_best(generated_results: list, source_url: str, user_context: dict, score_provider: str, job_id: str, filters: list):
+def run_scoring_and_find_best(generated_results: list, source_url: str, user_context: dict, score_provider: str, job_id: str, filters: list, scoring_strategy: str = "single_stage"):
     """
     Second task in the 'rank' chain. Called after candidate generation is complete.
     This task creates and executes the scoring sub-tasks.
@@ -301,7 +305,8 @@ def run_scoring_and_find_best(generated_results: list, source_url: str, user_con
             score_provider=score_provider,
             original_url=source_url,
             candidate_result=result,
-            user_context=user_context
+            user_context=user_context,
+            scoring_strategy=scoring_strategy
         ))
     
     # Create a callback to the finalizer task.
@@ -319,7 +324,7 @@ def run_scoring_and_find_best(generated_results: list, source_url: str, user_con
 
 
 @app.task
-def score_intervention(score_provider: str, original_url: str, candidate_result: dict, user_context: dict) -> dict:
+def score_intervention(score_provider: str, original_url: str, candidate_result: dict, user_context: dict, scoring_strategy: str = "single_stage") -> dict:
     """
     Calls a VLM to score a single candidate intervention.
     It now receives the full result dictionary from the generation task.
@@ -346,12 +351,20 @@ def score_intervention(score_provider: str, original_url: str, candidate_result:
         # The system prompt is now also imported
         system_prompt = IMAGE_SCORER_SYSTEM_PROMPT
 
-        score_json_str = scorer_model.score_image(
-            system_prompt=system_prompt,
-            user_prompt=user_prompt,
-            original_image_url=original_url,
-            candidate_image_url=candidate_url,
-        )
+        if scoring_strategy == "two_stage" and hasattr(scorer_model, "score_image_two_stage"):
+             score_json_str = scorer_model.score_image_two_stage(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                original_image_url=original_url,
+                candidate_image_url=candidate_url,
+            )
+        else:
+            score_json_str = scorer_model.score_image(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                original_image_url=original_url,
+                candidate_image_url=candidate_url,
+            )
         score_data = json.loads(score_json_str)
         return {
             "intervention": intervention_name,
@@ -444,13 +457,15 @@ def run_intervention_workflow(self, data: str):
             )
             
             # Callback for scoring - now receives a list of results
-            score_provider = request.get("score_provider", "gemini")  # Gemini is faster for scoring
+            score_provider = request.get("score_provider", "openai")
+            scoring_strategy = request.get("scoring_strategy", "single_stage")
             callback = run_scoring_and_find_best_batch.s(
                 source_url=source_url,
                 user_context={"filters": filters, **user_context},
                 score_provider=score_provider,
                 job_id=job_id,
-                filters=[chosen_filter]
+                filters=[chosen_filter],
+                scoring_strategy=scoring_strategy
             )
             
             # Chain: batch generation -> batch scoring
@@ -472,13 +487,15 @@ def run_intervention_workflow(self, data: str):
             
             # Step B: Define the callback that will run after generation is complete.
             # We pass parameters the next stage will need using a signature.
-            score_provider = request.get("score_provider", "gemini")  # Gemini is faster for scoring
+            score_provider = request.get("score_provider", "openai")
+            scoring_strategy = request.get("scoring_strategy", "single_stage")
             callback = run_scoring_and_find_best.s(
                 source_url=source_url,
                 user_context={"filters": filters, **user_context},
                 score_provider=score_provider,
                 job_id=job_id,
-                filters=[chosen_filter]
+                filters=[chosen_filter],
+                scoring_strategy=scoring_strategy
             )
             
             # Step C: Execute the generation group and link it to the scoring callback.

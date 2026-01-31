@@ -8,9 +8,9 @@ from .ImageConverter import ImageConverterFromURL, ImageConverterToURL, OpenCVIm
 from .ImageModifier import ImageModifier, BlurModifier
 from FilterUtils import get_best_filter
 # from FilterUtils import get_random_interventions
-from CartoonImager import make_image_cartoonish, make_image_cartoonish_gpt_image, make_image_replacement_gemini
+# from CartoonImager import make_image_cartoonish, make_image_cartoonish_gpt_image, make_image_replacement_gemini
 from ServerCache import image_cache
-from tasks import run_intervention_workflow
+# from tasks import run_intervention_workflow
 
 # singletons
 image_detector = GroundingDINODetector()
@@ -103,6 +103,7 @@ class ImageProcessor:
                     "next2_interventions": next2_interventions
                 }
             }
+            from tasks import run_intervention_workflow
             run_intervention_workflow.delay(json.dumps(payload))
             return {
                 "image_url": image_url,
@@ -125,6 +126,7 @@ class ImageProcessor:
                 "intervention_name": "stylization",
                 "filters": serialized_filters,
             }
+            from tasks import run_intervention_workflow
             run_intervention_workflow.delay(json.dumps(payload))
             return {
                 "image_url": image_url,

@@ -1,30 +1,42 @@
-# Reddit Clone Project
+# DIY-MOD User Study Interface (Reddit Clone)
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
-
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/tesims-projects/v0-reddit-clone-project)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/GfgJ9odBdbe)
+This is a Next.js application designed to simulate a Reddit feed for the DIY-MOD user studies. It interacts with the DIY-MOD backend to display content and allows researchers to compare "Original" vs. "Transformed" feeds side-by-side.
 
 ## Overview
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+This interface was used in User Study 2 of the paper *"What If Moderation Didn't Mean Suppression?"*. It provides a controlled environment to evaluate the efficacy of content transformations without the variability of a live social media platform.
 
-## Deployment
+## Prerequisites
 
-Your project is live at:
+*   Node.js 16+
+*   Running DIY-MOD Backend (see root README)
 
-**[https://vercel.com/tesims-projects/v0-reddit-clone-project](https://vercel.com/tesims-projects/v0-reddit-clone-project)**
+## Setup
 
-## Build your app
+1.  **Install Dependencies**:
+    ```bash
+    npm install
+    ```
 
-Continue building your app on:
+2.  **Environment Setup**:
+    Create a `.env.local` file in this directory:
+    ```bash
+    NEXT_PUBLIC_API_URL=http://localhost:8001
+    NEXT_PUBLIC_DEFAULT_USER_ID=demo-user
+    ```
 
-**[https://v0.dev/chat/projects/GfgJ9odBdbe](https://v0.dev/chat/projects/GfgJ9odBdbe)**
+3.  **Run Development Server**:
+    ```bash
+    npm run dev
+    ```
+    The application will be available at [http://localhost:3000](http://localhost:3000).
 
-## How It Works
+## Project Structure
 
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+*   `/app`: Next.js App Router pages.
+*   `/components`: UI components (Feed, Post, Sidebar).
+*   `/lib`: Utility functions and API clients.
+
+## Connection to Backend
+
+This frontend fetches processed feeds from the Backend API. Ensure the backend is running and you have processed some custom feeds using `process_json_custom_feed.py` (see root README for instructions).
